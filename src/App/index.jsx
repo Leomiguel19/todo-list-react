@@ -11,38 +11,65 @@ import { AppUI } from './AppUI';
 
 // Recibimos como parámetros el nombre y el estado inicial de nuestro item.
 function useLocalStorage(itemName, initialValue) {
-  // Guardamos nuestro item en una constante
-  const localStorageItem = localStorage.getItem(itemName);
-  let parsedItem;
-  
-  // Utilizamos la lógica que teníamos, pero ahora con las variables y parámentros nuevos
-  if (!localStorageItem) {
-    localStorage.setItem(itemName, JSON.stringify(initialValue));
-    parsedItem = initialValue;
-  } else {
-    parsedItem = JSON.parse(localStorageItem);
-  }
-  
-  // ¡Podemos utilizar otros hooks!
-  const [item, setItem] = React.useState(parsedItem);
+  const [error, setError] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [item, setItem] = React.useState(initialValue);
+
+  React.useEffect(() => {
+    // Simulamos un segundo de delay de carga 
+    setTimeout(() => {
+      // Manejamos la tarea dentro de un try/catch por si ocurre algún error
+      try{
+        // Guardamos nuestro item en una constante
+        const localStorageItem = localStorage.getItem(itemName);
+        let parsedItem;
+        
+        // Utilizamos la lógica que teníamos, pero ahora con las variables y parámentros nuevos
+        if (!localStorageItem) {
+          localStorage.setItem(itemName, JSON.stringify(initialValue));
+          parsedItem = initialValue;
+        } else {
+          parsedItem = JSON.parse(localStorageItem);
+        }
+
+        setItem(parsedItem);
+        setLoading(false)
+      }catch(error){
+        // En caso de un error lo guardamos en el estado
+        setError(error)
+      }
+    }, 1000);
+  });
 
   // Actualizamos la función para guardar nuestro item con las nuevas variables y parámetros
   const saveItem = (newItem) => {
-    const stringifiedItem = JSON.stringify(newItem);
-    localStorage.setItem(itemName, stringifiedItem);
-    setItem(newItem);
+    // Manejamos la tarea dentro de un try/catch por si ocurre algún error
+    try{
+      const stringifiedItem = JSON.stringify(newItem);
+      localStorage.setItem(itemName, stringifiedItem);
+      setItem(newItem);
+    }catch(error){
+      setError(error)
+    }
   };
 
-  // Regresamos los datos que necesitamos
-  return [
+  // Para tener un mejor control de los datos retornados, podemos regresarlos dentro de un objeto
+  return {
     item,
     saveItem,
-  ];
+    loading,
+    error
+  };
 }
 
 function App() {
-  // Guardamos nuestros TODOs del localStorage en nuestro estado
-  const [todos, saveTodos] = useLocalStorage('TODOS_V1', []);
+  // Desestructuramos los nuevos datos de nustro custom hook
+  const {
+    item: todos,
+    saveItem: saveTodos,
+    loading,
+    error
+  } = useLocalStorage('TODOS_V1', []);
   // El estado de nuestra búsqueda
   const [searchValue, setSearchValue] = React.useState("");
 
@@ -80,6 +107,8 @@ function App() {
 
   return (
     <AppUI
+      loading={loading}
+      error={error}
       totalTodos={totalTodos} 
       completedTodos={completedTodos} 
       searchValue={searchValue} 
